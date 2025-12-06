@@ -1,34 +1,33 @@
-/** @type {import('next').NextConfig} */
+// fix-api.js
+const fs = require('fs');
+const path = require('path');
 
-const nextConfig = {
-  reactStrictMode: true,
+const apiDir = path.join(__dirname, 'pages/api');
 
-  // Allow images from these domains
-  images: {
-    domains: ['api.dicebear.com', 'xsgames.co'],
-  },
+function fixFile(filePath) {
+  let content = fs.readFileSync(filePath, 'utf8');
 
-  // Optional: ignore ESLint errors during build (helps Vercel deploy)
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Fix anonymous default export
+  content = content.replace(
+    /export default async\s*\(([^)]*)\)\s*=>\s*{/g,
+    'const handler = async ($1) => {'
+  );
 
-  // Standalone output for Vercel
-  output: "standalone",
+  // Add export default if missing
+  if (!content.includes('export default handler')) {
+    content += '\n\nexport default handler;\n';
+  }
 
-  // Custom Webpack configuration if needed
-  webpack: (config, { isServer }) => {
-    // Example: if you need pdf.worker as a resource
-    config.module.rules.push({
-      test: /pdf\.worker\.min\.js$/,
-      type: 'asset/resource',
-      generator: {
-        filename: 'static/chunks/[name][ext]',
-      },
-    });
+  fs.writeFileSync(filePath, content, 'utf8');
+  console.log('Fixed:', filePath);
+}
 
-    return config;
-  },
-};
+function walk(dir) {
+  fs.readdirSync(dir).forEach((file) => {
+    const fullPath = path.join(dir, file);
+    if (fs.lstatSync(fullPath).isDirectory()) walk(fullPath);
+    else if (file.endsWith('.js')) fixFile(fullPath);
+  });
+}
 
-module.exports = nextConfig;
+walk(apiDir);
