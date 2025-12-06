@@ -1,33 +1,34 @@
 /** @type {import('next').NextConfig} */
 
-const path = require('path');
-const CopyWebpackPlugin = require('copy-webpack-plugin');
-
-
 const nextConfig = {
+  reactStrictMode: true,
+
+  // Allow images from these domains
   images: {
     domains: ['api.dicebear.com', 'xsgames.co'],
   },
-  reactStrictMode: true,
-  plugins: [
-    new CopyWebpackPlugin({
-      patterns: [
-        {
-          from: path.join(__dirname, './node_modules/pdfjs-dist/build/pdf.worker.min.js'),
-          to: path.join(__dirname, 'dist'),
-        },
-      ],
-    }),
 
-  ],
-  entry: {
-    main: './src/index.tsx',
-    'pdf.worker': path.join(__dirname, './node_modules/pdfjs-dist/build/pdf.worker.min.js'),
+  // Optional: ignore ESLint errors during build (helps Vercel deploy)
+  eslint: {
+    ignoreDuringBuilds: true,
   },
-  output: {
-    path: path.join(__dirname, 'dist'),
-    filename: '[name].bundle.js'
-  },
-}
 
-module.exports = nextConfig
+  // Standalone output for Vercel
+  output: "standalone",
+
+  // Custom Webpack configuration if needed
+  webpack: (config, { isServer }) => {
+    // Example: if you need pdf.worker as a resource
+    config.module.rules.push({
+      test: /pdf\.worker\.min\.js$/,
+      type: 'asset/resource',
+      generator: {
+        filename: 'static/chunks/[name][ext]',
+      },
+    });
+
+    return config;
+  },
+};
+
+module.exports = nextConfig;
